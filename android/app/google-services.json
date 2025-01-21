@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "547002206235",
+    "project_id": "fypchillilah",
+    "storage_bucket": "fypchillilah.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:547002206235:android:b8f2aaf64d4f28b16d90be",
+        "android_client_info": {
+          "package_name": "com.example.fypchillilah"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxareJqXJZ-yWgWjBAWyyiYW6-wu4VRnk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
