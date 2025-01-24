@@ -2,11 +2,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fypchillilah/pages/login.dart';
 import 'package:fypchillilah/pages/profile.dart';
-import 'package:fypchillilah/pages/reminder.dart';
 import 'package:fypchillilah/services/firestore.dart';
 
 import 'detection.dart';
 import 'iot.dart';
+import 'reminder.dart';
+import 'saved.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -38,16 +39,40 @@ class _HomepageState extends State<Homepage> {
   }
 
   Future<void> _logout() async {
-    try {
-      await FirebaseAuth.instance.signOut();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginPage()),
-      );
-    } catch (e) {
-      print("Error signing out: $e");
-      _showErrorDialog('Something went wrong while logging out.');
+    bool confirmLogout = await _showLogoutDialog();
+    if (confirmLogout) {
+      try {
+        await FirebaseAuth.instance.signOut();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LoginPage()),
+        );
+      } catch (e) {
+        print("Error signing out: $e");
+        _showErrorDialog('Something went wrong while logging out.');
+      }
     }
+  }
+
+  Future<bool> _showLogoutDialog() async {
+    return await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Logout'),
+            content: Text('Are you sure you want to log out?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text('Logout', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 
   void _showErrorDialog(String message) {
@@ -72,7 +97,11 @@ class _HomepageState extends State<Homepage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Welcome"),
+        title: Text(
+          "Welcome",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.green.shade700,
         actions: [
           IconButton(
             icon: Icon(Icons.logout),
@@ -81,95 +110,57 @@ class _HomepageState extends State<Homepage> {
         ],
       ),
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => DetectionPage()),
-                );
-              },
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Container(
-                  width: MediaQuery.of(context).size.width * 0.9,
-                  height: 120,
-                  padding: EdgeInsets.all(16),
-                  color: Colors.blue,
-                  child: Text(
-                    "Disease Detection",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+        // Center the column
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment:
+                MainAxisAlignment.center, // Center buttons vertically
+            children: [
+              _buildFeatureCard(
+                icon: Icons.healing,
+                title: "Disease Detection",
+                color: Colors.blue,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => DetectionPage()),
+                  );
+                },
               ),
-            ),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => RealtimeDataPage()),
-                );
-              },
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Container(
-                  width: MediaQuery.of(context).size.width * 0.9,
-                  height: 120,
-                  padding: EdgeInsets.all(16),
-                  color: Colors.green,
-                  child: Text(
-                    "Realtime Data",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+              SizedBox(height: 16),
+              _buildFeatureCard(
+                icon: Icons.data_usage,
+                title: "Realtime Data",
+                color: Colors.green,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => RealtimeDataPage()),
+                  );
+                },
               ),
-            ),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => TaskSchedule()),
-                );
-              },
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Container(
-                  width: MediaQuery.of(context).size.width * 0.9,
-                  height: 120,
-                  padding: EdgeInsets.all(16),
-                  color: Colors.orange,
-                  child: Text(
-                    "Task Schedule",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+              SizedBox(height: 16),
+              _buildFeatureCard(
+                icon: Icons.schedule,
+                title: "Task Schedule",
+                color: Colors.orange,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => ChiliSelectionPage()),
+                  );
+                },
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
+
+      // Bottom Navigation Bar
       bottomNavigationBar: BottomNavigationBar(
-        items: const [
+        items: [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: "Home",
@@ -180,8 +171,50 @@ class _HomepageState extends State<Homepage> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blue,
+        selectedItemColor: Colors.green.shade700,
         onTap: _onItemTapped,
+        backgroundColor: Colors.white,
+        elevation: 5,
+      ),
+    );
+  }
+
+  Widget _buildFeatureCard({
+    required IconData icon,
+    required String title,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        elevation: 6,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Container(
+          width: double.infinity, // Full-width
+          height: 100, // Larger height
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 40, color: Colors.white),
+              SizedBox(width: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

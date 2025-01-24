@@ -1,216 +1,246 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // To format date and time
-import '../services/firestore.dart';
+import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'saved.dart'; // Ensure this page exists
 
-class TaskSchedule extends StatefulWidget {
-  const TaskSchedule({super.key});
-
+class ChiliSelectionPage extends StatefulWidget {
   @override
-  State<TaskSchedule> createState() => _TaskScheduleState();
+  _ChiliSelectionPageState createState() => _ChiliSelectionPageState();
 }
 
-class _TaskScheduleState extends State<TaskSchedule> {
-  final FirestoreService firestoreService = FirestoreService();
-  final TextEditingController textController = TextEditingController();
-  final TextEditingController dateController = TextEditingController();
-  final TextEditingController timeController = TextEditingController();
-  DateTime selectedDate = DateTime.now();
-  TimeOfDay selectedTime = TimeOfDay.now();
+class _ChiliSelectionPageState extends State<ChiliSelectionPage> {
+  String? selectedStage;
+  DateTime? selectedDate;
+  TextEditingController nameController = TextEditingController();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool isSaving = false; // Loading indicator
 
-  // To track task completion status locally in the UI
-  Map<String, bool> taskCompletionStatus = {};
+  final Map<String, List<String>> stagePhases = {
+    'Seeds': [
+      'Phase 1: Seeds',
+      'Phase 2: Transplanting Chili Sapling',
+      'Phase 3: Vegetative Growth',
+      'Phase 4: Mature Chili Plant',
+      'Phase 5: Ripening & Harvesting'
+    ],
+    'Chili Sapling': [
+      'Phase 2: Transplanting Chili Sapling',
+      'Phase 3: Vegetative Growth',
+      'Phase 4: Mature Chili Plant',
+      'Phase 5: Ripening & Harvesting'
+    ],
+    'Mature Chili Plant': [
+      'Phase 4: Mature Chili Plant',
+      'Phase 5: Ripening & Harvesting'
+    ]
+  };
 
-  // Function to pick a date
+  final Map<String, int> phaseDurations = {
+    'Phase 1: Seeds': 0,
+    'Phase 2: Transplanting Chili Sapling': 14,
+    'Phase 3: Vegetative Growth': 35,
+    'Phase 4: Mature Chili Plant': 63,
+    'Phase 5: Ripening & Harvesting': 98
+  };
+
   Future<void> _selectDate(BuildContext context) async {
-    final DateTime pickedDate = await showDatePicker(
-          context: context,
-          initialDate: selectedDate,
-          firstDate: DateTime(2000),
-          lastDate: DateTime(2101),
-        ) ??
-        selectedDate;
-
-    if (pickedDate != null && pickedDate != selectedDate) {
-      setState(() {
-        selectedDate = pickedDate;
-      });
-      dateController.text = DateFormat('yyyy-MM-dd').format(selectedDate);
-    }
-  }
-
-  // Function to pick a time
-  Future<void> _selectTime(BuildContext context) async {
-    final TimeOfDay pickedTime = await showTimePicker(
-          context: context,
-          initialTime: selectedTime,
-        ) ??
-        selectedTime;
-
-    if (pickedTime != null && pickedTime != selectedTime) {
-      setState(() {
-        selectedTime = pickedTime;
-      });
-      timeController.text =
-          selectedTime.format(context); // Display selected time
-    }
-  }
-
-  // Function to open the task input dialog
-  void openTaskBox() {
-    showDialog(
+    final DateTime? picked = await showDatePicker(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Add New Task"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: textController,
-              decoration: InputDecoration(labelText: "Task Description"),
-            ),
-            GestureDetector(
-              onTap: () => _selectDate(context),
-              child: AbsorbPointer(
-                child: TextField(
-                  controller: dateController,
-                  decoration: InputDecoration(labelText: "Select Task Date"),
-                ),
-              ),
-            ),
-            GestureDetector(
-              onTap: () => _selectTime(context), // Show time picker on tap
-              child: AbsorbPointer(
-                child: TextField(
-                  controller: timeController,
-                  decoration: InputDecoration(labelText: "Task Time"),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              if (textController.text.isNotEmpty &&
-                  dateController.text.isNotEmpty &&
-                  timeController.text.isNotEmpty) {
-                final taskDateTime = DateTime(
-                  selectedDate.year,
-                  selectedDate.month,
-                  selectedDate.day,
-                  selectedTime.hour,
-                  selectedTime.minute,
-                );
-                firestoreService.addTask(textController.text,
-                    DateFormat('yyyy-MM-dd HH:mm').format(taskDateTime));
-                textController.clear();
-                dateController.clear();
-                timeController.clear();
-                Navigator.pop(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Please fill all fields")));
-              }
-            },
-            child: Text("Add Task"),
-          ),
-        ],
-      ),
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2023, 1),
+      lastDate: DateTime(2030, 12),
     );
+    if (picked != null) {
+      setState(() {
+        selectedDate = picked;
+      });
+    }
   }
 
-  // Function to delete task
-  void deleteTask(String taskId) {
-    firestoreService.deleteTask(taskId);
-    setState(() {}); // Force UI update after task deletion
-  }
+  Future<void> _saveToFirestore() async {
+    if (selectedStage == null ||
+        selectedDate == null ||
+        nameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill in all fields including name!')),
+      );
+      return;
+    }
 
-  // Function to toggle task completion in the UI (without updating Firestore)
-  void toggleTaskCompletion(String taskId) {
     setState(() {
-      taskCompletionStatus[taskId] = !(taskCompletionStatus[taskId] ?? false);
+      isSaving = true;
     });
+
+    try {
+      await _firestore.collection('chili_plants').add({
+        'name': nameController.text.trim(),
+        'planting_stage': selectedStage,
+        'start_date': selectedDate!.toIso8601String(),
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Data successfully saved!')),
+      );
+
+      setState(() {
+        nameController.clear();
+        selectedStage = null;
+        selectedDate = null;
+        isSaving = false;
+      });
+    } catch (e) {
+      setState(() {
+        isSaving = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Task Schedule"),
-        backgroundColor: Colors.green,
+        title: Text('Plant Your Chili Plant',
+            style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.green[700],
+        iconTheme: IconThemeData(color: Colors.white),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "Manage your chili plant care tasks",
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green),
+            // Plant Name Input
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                labelText: 'Enter Plant Name',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                prefixIcon:
+                    Icon(Icons.local_florist, color: Colors.green.shade700),
+              ),
             ),
             SizedBox(height: 20),
-            Expanded(
-              child: StreamBuilder(
-                stream: firestoreService.getTasks(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  }
 
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(child: Text("No tasks scheduled"));
-                  }
+            // Dropdown for Stage Selection
+            DropdownButtonFormField<String>(
+              value: selectedStage,
+              decoration: InputDecoration(
+                labelText: 'Select Stage',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                prefixIcon: Icon(Icons.grass, color: Colors.green.shade700),
+              ),
+              items: stagePhases.keys.map((String stage) {
+                return DropdownMenuItem<String>(
+                  value: stage,
+                  child: Text(stage),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedStage = newValue;
+                  selectedDate = null;
+                });
+              },
+            ),
+            SizedBox(height: 20),
 
-                  final tasks = snapshot.data!;
-                  return ListView.builder(
-                    itemCount: tasks.length,
-                    itemBuilder: (context, index) {
-                      bool isCompleted =
-                          taskCompletionStatus[tasks[index].taskId] ?? false;
+            // Date Picker Input
+            InkWell(
+              onTap: () => _selectDate(context),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Start Date',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  prefixIcon:
+                      Icon(Icons.calendar_today, color: Colors.green.shade700),
+                ),
+                child: Text(
+                  selectedDate == null
+                      ? 'Select Start Date'
+                      : DateFormat('dd/MM/yyyy').format(selectedDate!),
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+            SizedBox(height: 20),
 
-                      return Card(
-                        margin: EdgeInsets.symmetric(vertical: 8),
-                        elevation: 5,
-                        child: ListTile(
-                          title: Text(
-                            tasks[index].taskDescription,
-                            style: TextStyle(
-                              color: isCompleted ? Colors.grey : Colors.black,
-                              fontSize: 18,
-                              decoration: isCompleted
-                                  ? TextDecoration.lineThrough
-                                  : null, // Strikethrough for completed tasks
-                            ),
-                          ),
-                          subtitle:
-                              Text("Scheduled for: ${tasks[index].taskDate}"),
-                          trailing: Icon(
-                            Icons.check_circle,
-                            color: isCompleted ? Colors.green : Colors.grey,
-                          ),
-                          onTap: () => toggleTaskCompletion(tasks[index]
-                              .taskId), // Toggle task completion on click
-                          leading: IconButton(
-                            icon: Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => deleteTask(
-                                tasks[index].taskId), // Delete task on click
-                          ),
-                        ),
+            // Growth Phases Display
+            if (selectedStage != null && selectedDate != null)
+              Column(
+                children: stagePhases[selectedStage]!.map((phase) {
+                  DateTime phaseDate = selectedDate!.add(
+                    Duration(
+                      days: phaseDurations[phase]! -
+                          phaseDurations[stagePhases[selectedStage]!.first]!,
+                    ),
+                  );
+                  return Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    margin: EdgeInsets.symmetric(vertical: 5),
+                    child: ListTile(
+                      leading: Icon(Icons.eco, color: Colors.green.shade700),
+                      title: Text(
+                        '$phase',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        'Estimated Date: ${DateFormat('dd/MM/yyyy').format(phaseDate)}',
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            SizedBox(height: 20),
+
+            // Save & View Records Buttons
+            Center(
+              child: Column(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: isSaving ? null : _saveToFirestore,
+                    icon: isSaving
+                        ? CircularProgressIndicator(color: Colors.white)
+                        : Icon(Icons.save, color: Colors.white),
+                    label: Text('Save Plant Details',
+                        style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[700],
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 50, vertical: 12),
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => ChiliRecordsPage()),
                       );
                     },
-                  );
-                },
+                    icon: Icon(Icons.list, color: Colors.white),
+                    label: Text('View Records',
+                        style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[700],
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 50, vertical: 12),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: openTaskBox,
-        child: Icon(Icons.add),
-        backgroundColor: Colors.green,
       ),
     );
   }

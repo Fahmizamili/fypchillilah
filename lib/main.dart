@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'pages/homepage.dart';
+import 'pages/iot.dart';
 import 'pages/login.dart';
 import 'pages/profile.dart';
 import 'pages/reminder.dart';

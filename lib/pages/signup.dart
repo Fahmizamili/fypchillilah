@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:fypchillilah/pages/profile.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -34,9 +35,13 @@ class _SignUpPageState extends State<SignUpPage> {
         password: password,
       );
 
-      // After successful registration, navigate to a new page (e.g., profile page)
-      // You can replace this with the appropriate page
-      Navigator.pushReplacementNamed(context, '/profilePage');
+      // Navigate to the Profile Page upon successful signup
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProfilePage(),
+        ),
+      );
     } on FirebaseAuthException catch (e) {
       // Handle registration errors
       if (e.code == 'weak-password') {
@@ -56,14 +61,14 @@ class _SignUpPageState extends State<SignUpPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Error'),
+        title: const Text('Error'),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context);
             },
-            child: Text('OK'),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -74,7 +79,7 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Sign Up"),
+        title: const Text("Sign Up"),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -85,7 +90,7 @@ class _SignUpPageState extends State<SignUpPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
 
                 // Image above the email field
                 Image.asset(
@@ -93,44 +98,44 @@ class _SignUpPageState extends State<SignUpPage> {
                   height: 150,
                   width: 150,
                 ),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
 
                 // Email Field
                 TextField(
                   controller: _emailController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: "Email",
                     border: OutlineInputBorder(),
                   ),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                 // Password Field
                 TextField(
                   controller: _passwordController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: "Password",
                     border: OutlineInputBorder(),
                   ),
                   obscureText: true,
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                 // Confirm Password Field
                 TextField(
                   controller: _confirmPasswordController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: "Confirm Password",
                     border: OutlineInputBorder(),
                   ),
                   obscureText: true,
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                 // Sign Up Button
                 ElevatedButton(
                   onPressed: _registerUser, // Register the user when pressed
-                  child: Text("Sign Up"),
+                  child: const Text("Sign Up"),
                 ),
               ],
             ),

@@ -36,6 +36,22 @@ class FirestoreService {
     }
   }
 
+  // Add a new planting record to Firestore
+  Future<void> savePlantingData(
+      String userId, String stage, DateTime date) async {
+    try {
+      await FirebaseFirestore.instance.collection('planting').add({
+        'userId': userId, // Link to a specific user
+        'stage': stage, // Selected planting stage (e.g., "Anak Benih")
+        'date': date.toIso8601String(), // Convert to string for Firestore
+        'createdAt': Timestamp.now(), // Timestamp for sorting
+      });
+      print("Planting data saved successfully.");
+    } catch (e) {
+      print("Error saving planting data: $e");
+    }
+  }
+
   // Add a new task
   Future<void> addTask(String taskDescription, String taskDate) async {
     try {
